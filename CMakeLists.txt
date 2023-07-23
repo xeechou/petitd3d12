@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.6 FATAL_ERROR)
 cmake_policy(VERSION 3.6)
-project(DirectX12Seed
+project(PetitD3D12
         VERSION 1.0.0.0
         LANGUAGES C CXX
 )
@@ -43,6 +43,10 @@ set(BUILD_STATIC_LIBS ON)
 add_subdirectory(external/glm)
 
 
+# TinyOBJLoader
+add_library(tinyobj STATIC external/tiny_obj_loader.cc)
+target_include_directories(tinyobj PUBLIC external)
+
 # =============================================================
 
 
@@ -58,6 +62,7 @@ add_executable(sdl2main
 
 target_link_libraries(sdl2main
   glm::glm
+  tinyobj
   ${D3D12_LIBRARIES}
   ${SDL2_LIBRARY}
   ${SDL2MAIN_LIBRARY}

@@ -1,9 +1,10 @@
 #pragma once
 
-
 #define GLM_FORCE_SSE42 1
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES 1
+#if !defined(GLM_FORCE_LEFT_HANDED)
 #define GLM_FORCE_LEFT_HANDED
+#endif
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
