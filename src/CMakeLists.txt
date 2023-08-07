@@ -15,32 +15,6 @@ target_include_directories(d3d12helper PUBLIC
   ${SDL2_INCLUDE_DIR}
   ${D3D12_INCLUDE_DIRS})
 
-# # =============================================================
-
-# add_executable(sdl2main
-#   sdl2main.cpp
-#   renderer1.cpp)
-
-# target_link_libraries(sdl2main
-#   glm::glm
-#   tinyobj
-#   ${D3D12_LIBRARIES}
-#   ${SDL2_LIBRARY}
-#   ${SDL2MAIN_LIBRARY}
-#   )
-# target_compile_definitions(sdl2main PUBLIC -DGLM_FORCE_LEFT_HANDED)
-
-# target_include_directories(sdl2main PUBLIC
-#   ${SDL2_INCLUDE_DIR}
-#   ${D3D12_INCLUDE_DIRS}
-# )
-
-# set_property(TARGET sdl2main PROPERTY VS_DEBUGGER_WORKING_DIRECTORY
-#   ${CMAKE_SOURCE_DIR})
-# set_target_properties(sdl2main PROPERTIES
-#   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-
 # =============================================================
 ####### Shaders
 
@@ -93,7 +67,6 @@ target_include_directories(cube PUBLIC
   ${D3D12_INCLUDE_DIRS})
 
 target_compile_definitions(cube PUBLIC
-  -DGLM_FORCE_LEFT_HANDED
   -Dno_init_all)
 
 set_target_properties(cube PROPERTIES
