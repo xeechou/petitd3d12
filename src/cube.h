@@ -1,14 +1,16 @@
 #pragma once
 
-#ifndef GLM_FORCE_LEFT_HANDED
+#if !defined(GLM_FORCE_LEFT_HANDED)
 #    define GLM_FORCE_LEFT_HANDED
+#endif
+
+#if !defined(GLM_FORCE_DEPTH_ZERO_TO_ONE)
+#    define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #endif
 
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include <glm/matrix.hpp>
-
-#include <DirectXMath.h>
 
 #include "application.h"
 #include "window.h"
@@ -83,9 +85,9 @@ private:
     D3D12_RECT     m_ScissorRect;
     float          m_FoV;
 
-    DirectX::XMMATRIX m_ModelMatrix;
-    DirectX::XMMATRIX m_ViewMatrix;
-    DirectX::XMMATRIX m_ProjectionMatrix;
+    glm::mat4 m_ModelMatrix;
+    glm::mat4 m_ViewMatrix;
+    glm::mat4 m_ProjectionMatrix;
 
     bool m_ContentLoaded;
 };

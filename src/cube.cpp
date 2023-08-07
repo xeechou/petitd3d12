@@ -1,4 +1,7 @@
 #include "cube.h"
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+
 #include "helpers.h"
 #include "window.h"
 
@@ -6,10 +9,7 @@
 #include <memory>
 #include <SDL_events.h>
 
-#include <DirectXMath.h>
-
 using namespace Microsoft::WRL;
-using namespace DirectX;
 
 // Clamp a value between a min and max range.
 template <typename T>
@@ -22,19 +22,19 @@ constexpr const T& clamp(const T& val, const T& min, const T& max)
 // Vertex data for a colored cube.
 struct VertexPosColor
 {
-    XMFLOAT3 Position;
-    XMFLOAT3 Color;
+    glm::vec3 Position;
+    glm::vec3 Color;
 };
 
 static VertexPosColor g_Vertices[8] = {
-    { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f) }, // 0
-    { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },  // 1
-    { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f) },   // 2
-    { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },  // 3
-    { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },  // 4
-    { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f) },   // 5
-    { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) },    // 6
-    { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }    // 7
+    { glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(0.0f, 0.0f, 0.0f) }, // 0
+    { glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f) },  // 1
+    { glm::vec3(1.0f, 1.0f, -1.0f), glm::vec3(1.0f, 1.0f, 0.0f) },   // 2
+    { glm::vec3(1.0f, -1.0f, -1.0f), glm::vec3(1.0f, 0.0f, 0.0f) },  // 3
+    { glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },  // 4
+    { glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 1.0f) },   // 5
+    { glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f) },    // 6
+    { glm::vec3(1.0f, -1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f) }    // 7
 };
 
 static WORD g_Indicies[36] = {
@@ -43,7 +43,7 @@ static WORD g_Indicies[36] = {
 
 CubeApp::CubeApp() :
     m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_FoV(45.0),
+    m_FoV(glm::radians(45.0f)),
     m_ContentLoaded(false)
 {
 }
@@ -180,7 +180,7 @@ bool CubeApp::LoadContent()
 
     // A single 32-bit constant root parameter that is used by the vertex shader.
     CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-    rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    rootParameters[0].InitAsConstants(sizeof(glm::mat4) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
@@ -351,21 +351,22 @@ void CubeApp::Update(double delta, double total)
     }
 
     // Update the model matrix.
-    float          angle        = static_cast<float>(total * 90.0);
-    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-    m_ModelMatrix               = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+    float           angle = static_cast<float>(total * 90.0);
+    const glm::vec3 axis  = glm::vec3(0.0, 1.0, 1.0);
+    m_ModelMatrix         = glm::rotate(glm::mat4(1.0), glm::radians(angle), axis);
 
     // Update the view matrix.
-    const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
-    const XMVECTOR focusPoint  = XMVectorSet(0, 0, 0, 1);
-    const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-    m_ViewMatrix               = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+    const glm::vec3 eye    = glm::vec3(0, 0, -10);
+    const glm::vec3 center = glm::vec3(0, 0, 0);
+    const glm::vec3 up     = glm::vec3(0, 1, 0);
+    m_ViewMatrix           = glm::lookAt(eye, center, up);
 
     // Update the projection matrix.
-    std::shared_ptr<Window> window      = Application::Get().GetActiveWindow();
-    float                   aspectRatio = window->GetClientWidth() / static_cast<float>(window->GetClientHeight());
-    m_ProjectionMatrix                  = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
+    auto  window       = Application::Get().GetActiveWindow();
+    float aspectRatio  = window->GetClientWidth() / static_cast<float>(window->GetClientHeight());
+    m_ProjectionMatrix = glm::perspective((float)m_FoV, aspectRatio, 0.1f, 100.0f);
 }
+
 void CubeApp::Render(double delta, double total)
 {
     std::shared_ptr<Window> window = Application::Get().GetActiveWindow();
@@ -401,9 +402,8 @@ void CubeApp::Render(double delta, double total)
     commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
     // Update the MVP matrix
-    XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-    mvpMatrix          = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-    commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+    glm::mat4 mvpMatrix = m_ProjectionMatrix * m_ViewMatrix * m_ModelMatrix;
+    commandList->SetGraphicsRoot32BitConstants(0, sizeof(glm::mat4) / 4, &mvpMatrix, 0);
 
     commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
 
