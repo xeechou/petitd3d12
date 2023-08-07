@@ -48,6 +48,9 @@ bld/
 [Oo]bj/
 [Ll]og/
 
+# Clang cache
+.cache/*
+
 # Windows
 
 *.DS_Store
