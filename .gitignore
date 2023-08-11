@@ -29,7 +29,10 @@ webassembly/
 *.user
 *.userosscache
 *.sln.docstates
-
+*.cso
+*.exe
+*.lib
+*.pdb
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -44,7 +47,7 @@ build*
 x64/
 x86/
 bld/
-[Bb]in/
+#[Bb]in/
 [Oo]bj/
 [Ll]og/
 
@@ -87,7 +90,7 @@ artifacts/
 *_i.h
 *.ilk
 *.meta
-*.obj
+# *.obj
 *.pch
 *.pdb
 *.pgc
