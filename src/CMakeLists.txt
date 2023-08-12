@@ -20,10 +20,20 @@ target_include_directories(d3d12helper PUBLIC
 
 set(SHADER_FILES
   shaders/VertexShader.hlsl
-  shaders/PixelShader.hlsl)
+  shaders/PixelShader.hlsl
+  shaders/MeshVertex.hlsl
+  shaders/MeshPixel.hlsl)
 
 set_source_files_properties( shaders/VertexShader.hlsl PROPERTIES
   ShaderType "vs" #they also use ShaderType, ShaderModel
+  ShaderModel "5_1")
+
+set_source_files_properties( shaders/MeshPixel.hlsl PROPERTIES
+  ShaderType "ps"
+  ShaderModel "5_1")
+
+set_source_files_properties(shaders/MeshVertex.hlsl PROPERTIES
+  ShaderType "vs"
   ShaderModel "5_1")
 
 set_source_files_properties( shaders/PixelShader.hlsl PROPERTIES
@@ -51,31 +61,58 @@ endforeach(FILE)
 # =============================================================
 # cube app
 add_executable(cube
-  main.cpp
+  cubemain.cpp
   cube.cpp
   ${CSO_SHADER_FILES})
 
 target_link_libraries(cube
-  ${SDL2_LIBRARY}
-  ${SDL2MAIN_LIBRARY}
-  ${D3D12_LIBRARIES}
+  SDL2::SDL2
+  SDL2::SDL2Main
   glm::glm
   d3d12helper)
-
-target_include_directories(cube PUBLIC
-  ${SDL2_INCLUDE_DIR}
-  ${D3D12_INCLUDE_DIRS})
 
 target_compile_definitions(cube PUBLIC
   -Dno_init_all)
 
 set_target_properties(cube PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 set_property(TARGET cube PROPERTY VS_DEBUGGER_WORKING_DIRECTORY
-  ${CMAKE_BINARY_DIR}/bin)
+  ${CMAKE_SOURCE_DIR}/bin)
 
 # copy shaders to output dir of cube
 add_custom_command(TARGET cube POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy ${CSO_SHADER_FILES} $<TARGET_FILE_DIR:cube>
+  COMMAND_EXPAND_LISTS)
+
+
+# =============================================================
+add_executable(meshapp
+  meshmain.cpp
+  mesh.cpp
+  ${CSO_SHADER_FILES})
+
+target_link_libraries(meshapp
+  SDL2::SDL2
+  SDL2::SDL2Main
+  ${D3D12_LIBRARIES}
+  glm::glm
+  d3d12helper
+  tinyobj)
+
+target_include_directories(meshapp PUBLIC
+  ${D3D12_INCLUDE_DIRS})
+
+target_compile_definitions(meshapp PUBLIC
+  -Dno_init_all)
+
+set_target_properties(meshapp PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+
+set_property(TARGET meshapp PROPERTY VS_DEBUGGER_WORKING_DIRECTORY
+  ${CMAKE_SOURCE_DIR}/bin)
+
+# copy shaders to output dir of cube
+add_custom_command(TARGET meshapp POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy ${CSO_SHADER_FILES} $<TARGET_FILE_DIR:meshapp>
   COMMAND_EXPAND_LISTS)
