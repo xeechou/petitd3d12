@@ -10,5 +10,9 @@ The Sample Code While learning DirectX12. It's a simple forward shading, phong l
 ## Screen Shots
 ![bmw](bin/screenshot.gif)
 
+## Thanks
+- [Gep's excellent tutorial and sample code](https://www.3dgep.com/learning-directx-12-2/)
+- [Alain Galvan's Dx12seed](https://alain.xyz/blog/raw-directx12)
+- [Lotwig D3D12 Videos](https://www.youtube.com/watch?v=sH90ulKE1f8)
 
 
