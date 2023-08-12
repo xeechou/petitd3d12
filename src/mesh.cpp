@@ -49,9 +49,13 @@ MeshApp::MeshApp() :
     m_FoV(glm::radians(45.0f)),
     m_ContentLoaded(false)
 {
+    m_LightDir = glm::normalize(glm::vec3(1.0, 1.0, -1.0));
 }
 
-bool MeshApp::Initialize() { return true; }
+bool MeshApp::Initialize()
+{
+    return true;
+}
 
 bool MeshApp::LoadContent()
 {
@@ -66,6 +70,7 @@ bool MeshApp::LoadContent()
 
     CreateRenderTargets();
     CreatePSOs();
+    CreateUniforms();
 
     // Resize/Create the depth buffer.
     std::shared_ptr<Window> window = Application::Get().GetActiveWindow();
@@ -175,9 +180,10 @@ bool MeshApp::LoadMesh()
     {
         Material new_material;
 
-        new_material.diffuse   = glm::make_vec3(materials[m].diffuse);
-        new_material.specular  = glm::make_vec3(materials[m].specular);
-        new_material.shininess = materials[m].shininess;
+        new_material.diffuse  = glm::vec4(glm::make_vec3(materials[m].diffuse),
+                                         materials[m].dissolve);
+        new_material.specular = glm::vec4(glm::make_vec3(materials[m].specular),
+                                          materials[m].shininess);
         m_Materials.push_back(new_material);
     }
 }
@@ -292,10 +298,13 @@ void MeshApp::CreateMeshRootSignature()
     // Allow input layout and deny unnecessary access to certain pipeline stages.
     D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = VertexPixelRootSignatureFlags();
 
-    // TODO need to add material inside
-    //  A single 32-bit constant root parameter that is used by the vertex shader.
-    std::array<CD3DX12_ROOT_PARAMETER1, 1> rootParameters;
-    rootParameters[0].InitAsConstants(sizeof(Uniform) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    //  A 32-bit constant root parameter for vertices
+    // And a material/lighting root parameters for pixels
+    std::array<CD3DX12_ROOT_PARAMETER1, 2> rootParameters;
+    // rootParameters[0].InitAsConstants(sizeof(Uniform) / sizeof(uint32_t), 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+    rootParameters[1].InitAsConstants(sizeof(Material) / sizeof(uint32_t), 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+    // rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_PIXEL);
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1(rootParameters.size(), rootParameters.data(), 0, nullptr, rootSignatureFlags);
@@ -328,7 +337,7 @@ void MeshApp::CreateMeshPSO()
 
     // Load the pixel shader.
     ComPtr<ID3DBlob> pixelShaderBlob;
-    ThrowIfFailed(D3DReadFileToBlob(L"PixelShader.cso", &pixelShaderBlob));
+    ThrowIfFailed(D3DReadFileToBlob(L"MeshPixel.cso", &pixelShaderBlob));
 
     PipelineStateStream pipelineStateStream;
 
@@ -359,6 +368,29 @@ void MeshApp::CreatePSOs()
 
     CreateMeshRootSignature();
     CreateMeshPSO();
+}
+
+void MeshApp::CreateUniforms()
+{
+    auto device = Application::Get().GetDevice();
+
+    size_t uniform_size = (sizeof(Uniform) + 255) & ~255;
+
+    ThrowIfFailed(device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(uniform_size, D3D12_RESOURCE_FLAG_NONE),
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&m_UniformBuffer)));
+    m_UniformBuffer->SetName(L"Uniform Buffer");
+
+    // // I don't need a view for root descriptor
+    // D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc {};
+    // cbvDesc.BufferLocation = m_MaterialBuffer->GetGPUVirtualAddress();
+    // cbvDesc.SizeInBytes    = uniform_size; // need to be 256 byte aligned.
+
+    // D3D12_CPU_DESCRIPTOR_HANDLE
 }
 
 void MeshApp::UnloadContent()
@@ -433,7 +465,7 @@ void MeshApp::Update(double delta, double total)
     // Update the model matrix.
     float           angle = static_cast<float>(total * 90.0);
     const glm::vec3 axis  = glm::vec3(0.0, 1.0, 0.0);
-    m_ModelMatrix         = glm::translate(glm::vec3(0.0f, 0.0f, 2.0f)) * glm::rotate(glm::mat4(1.0), glm::radians(angle), axis) * glm::scale(glm::vec3(0.01));
+    m_ModelMatrix         = glm::translate(glm::vec3(0.0f, -2.0f, 2.0f)) * glm::rotate(glm::mat4(1.0), glm::radians(angle), axis) * glm::scale(glm::vec3(0.01));
     // m_ModelMatrix = glm::rotate(glm::mat4(1.0), glm::radians(angle), axis);
     // Update the view matrix.
     const glm::vec3 eye    = glm::vec3(0, 0, -10);
@@ -506,10 +538,21 @@ void MeshApp::RenderMesh(ComPtr<ID3D12GraphicsCommandList2> commandList, double 
         m_ProjectionMatrix * m_ViewMatrix * m_ModelMatrix,
         glm::mat4(glm::transpose(glm::inverse(glm::mat3(m_ModelMatrix)))),
     };
-    commandList->SetGraphicsRoot32BitConstants(0, sizeof(Uniform) / 4, &uniform, 0);
+    D3D12_RANGE readRange { 0, sizeof(uniform) };
+    Uniform*    mapped = nullptr;
+    ThrowIfFailed(m_UniformBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mapped)));
+    memcpy(mapped, &uniform, sizeof(uniform));
+    m_UniformBuffer->Unmap(0, &readRange);
+
+    commandList->SetGraphicsRootConstantBufferView(0, m_UniformBuffer->GetGPUVirtualAddress());
 
     for (auto submesh : m_SubMeshes)
     {
+        Material material = submesh.material_id >= 0 ? m_Materials[submesh.material_id] :
+                                                       Material::default_material();
+        material.lightDir = glm::vec4(m_LightDir, 0.0);
+
+        commandList->SetGraphicsRoot32BitConstants(1, sizeof(Material) / sizeof(uint32_t), &material, 0);
         commandList->DrawIndexedInstanced(submesh.index_count, 1, submesh.index_offset, 0, 0);
     }
 }

@@ -1,11 +1,5 @@
 #pragma once
 
-#include "application.h"
-#include "window.h"
-#include <d3d12.h>
-#include <stdint.h>
-#include <wrl/client.h>
-
 #if !defined(GLM_FORCE_LEFT_HANDED)
 #    define GLM_FORCE_LEFT_HANDED
 #endif
@@ -13,6 +7,10 @@
 #if !defined(GLM_FORCE_DEPTH_ZERO_TO_ONE)
 #    define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #endif
+
+#include "application.h"
+#include "window.h"
+#include <stdint.h>
 
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
@@ -41,16 +39,19 @@ public:
 
     struct Material
     {
-        glm::vec3 diffuse   = glm::vec3(1.0);
-        glm::vec3 specular  = glm::vec3(0.0);
-        float     shininess = 0.0;
-        // glm::
+        glm::vec4 diffuse  = glm::vec4(1.0); // w alpha
+        glm::vec4 specular = glm::vec4(0.0);
+        glm::vec4 lightDir = glm::vec4(1.0, 1.0, 0.0, 0.0);
+
+        static Material default_material() { return Material(); }
     };
 
     struct Uniform
     {
         glm::mat4 MVP;
         glm::mat4 normal;
+        glm::mat4 model;
+        glm::vec4 eye;
     };
 
 public:
@@ -70,7 +71,7 @@ protected:
     bool UploadVertices();
     bool CreateRenderTargets();
     void CreatePSOs();
-
+    void CreateUniforms();
     void CreateMeshPSO();
     void CreateMeshRootSignature();
 
@@ -113,6 +114,7 @@ private: // parameters
     glm::mat4 m_ModelMatrix;
     glm::mat4 m_ViewMatrix;
     glm::mat4 m_ProjectionMatrix;
+    glm::vec3 m_LightDir;
 
 private: // CPU Data.
     std::vector<Vertex>   m_Vertices;
@@ -128,6 +130,8 @@ private: // GPU Data
     // Index buffer for the mesh
     Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
     D3D12_INDEX_BUFFER_VIEW                m_IndexBufferView;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_UniformBuffer;
 
     /// render targets
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;

@@ -20,11 +20,16 @@ target_include_directories(d3d12helper PUBLIC
 
 set(SHADER_FILES
   shaders/VertexShader.hlsl
+  shaders/PixelShader.hlsl
   shaders/MeshVertex.hlsl
-  shaders/PixelShader.hlsl)
+  shaders/MeshPixel.hlsl)
 
 set_source_files_properties( shaders/VertexShader.hlsl PROPERTIES
   ShaderType "vs" #they also use ShaderType, ShaderModel
+  ShaderModel "5_1")
+
+set_source_files_properties( shaders/MeshPixel.hlsl PROPERTIES
+  ShaderType "ps"
   ShaderModel "5_1")
 
 set_source_files_properties(shaders/MeshVertex.hlsl PROPERTIES
